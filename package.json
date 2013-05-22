@@ -1,0 +1,16 @@
+{
+	"name": "Mongodb_Group_test",
+	"description": "Simple bench of different method for group data. Js Pure, Group and with Aggregate framwork",
+	"version": "1.0.0",
+	"maintainers": [{
+		"name": "Pierrick PAUL",
+		"email": "pierrick@labelleassiette.com",
+		"web": "www.pierrickpaul.fr"
+	}],
+	"dependencies": {
+		"mongodb": "1.2.x",
+		"nomnom": "1.6.x",
+		"cli-table": "0.2.x",
+		"async": "0.2.x"
+	}
+}
