@@ -86,33 +86,39 @@ function setupMongoDB_fast () {
 	});
 }
 
-function run () {
-	function runTest (db, collection) {
+function run (arg) {
+
+	function runTest (arg, db, collection) {
 		async.waterfall([
 			function (next) {
-				console.log('Group with pure js');
-				async.timesSeries(
-					nTimes,
-					function (n, again) {
-						var start = Date.now();
-						collection.find({}, {genre: 1}).toArray(function(err, doc){
-							var result = [];
-							doc.forEach(function(tree){
-								if (result[tree.genre] === undefined) {
-									result[tree.genre] = {};
-									result[tree.genre].totalByGenre = 1;
-								} else {
-									result[tree.genre].totalByGenre++;
-								}
+				if (arg.pure === false) {
+					next(null);
+				} else {
+					console.log('Group with pure js');
+
+					async.timesSeries(
+						nTimes,
+						function (n, again) {
+							var start = Date.now();
+							collection.find({}, {genre: 1}).toArray(function(err, doc){
+								var result = [];
+								doc.forEach(function(tree){
+									if (result[tree.genre] === undefined) {
+										result[tree.genre] = {};
+										result[tree.genre].totalByGenre = 1;
+									} else {
+										result[tree.genre].totalByGenre++;
+									}
+								});
+								nativeTime.push(Date.now() - start);
+								again(null);
 							});
-							nativeTime.push(Date.now() - start);
-							again(null);
-						});
-					},
-					function (err, times) {
-						next(null);
-					}
-				);
+						},
+						function (err, times) {
+							next(null);
+						}
+					);
+				}
 			},
 			function (next) {
 				/*
@@ -129,62 +135,70 @@ function run () {
 					})
 
 				*/
-				console.log('Group with group mongodb');
+				if (arg.group === false) {
+					next(null);
+				} else {
+					console.log('Group with group mongodb');
 
-				async.timesSeries(nTimes, function (n, again){
-					var start = Date.now();
-					var time = Date.now();
-					collection.group(
-						['genre'],
-						{},
-						{ totalByGenre: 0 },
-						function ( curr, result ) {
-							result.totalByGenre += 1;
-						},
-						function (err, result) {
-							groupTime.push(Date.now() - start);
+					async.timesSeries(nTimes, function (n, again){
+						var start = Date.now();
+						var time = Date.now();
+						collection.group(
+							['genre'],
+							{},
+							{ totalByGenre: 0 },
+							function ( curr, result ) {
+								result.totalByGenre += 1;
+							},
+							function (err, result) {
+								groupTime.push(Date.now() - start);
+								again(null);
+							});
+
+					}, function (err, times) {
+						next(null);
+					});
+				}
+			},
+			function (next) {
+				if (arg.aggregate === false) {
+					next(null);
+				} else {
+					console.log('Group with aggregate mongodb');
+
+					async.timesSeries(nTimes, function (n, again){
+						var start = Date.now();
+						var time = Date.now();
+						collection.aggregate(
+						{
+							$project : {
+								genre: 1
+							}
+						}, {
+							$group : {
+								_id: '$genre',
+								totalByGenre: { $sum: 1}
+							}
+						},{
+							$sort: {totalByGenre: -1}
+						}, function(err, result) {
+							aggregationTime.push(Date.now() - start);
 							again(null);
 						});
 
-				}, function (err, times) {
-					next(null);
-				});
-			},
-			function (next) {
-				console.log('Group with aggregate mongodb');
-
-				async.timesSeries(nTimes, function (n, again){
-					var start = Date.now();
-					var time = Date.now();
-					collection.aggregate(
-					{
-						$project : {
-							genre: 1
-						}
-					}, {
-						$group : {
-							_id: '$genre',
-							totalByGenre: { $sum: 1}
-						}
-					},{
-						$sort: {totalByGenre: -1}
-					}, function(err, result) {
-						aggregationTime.push(Date.now() - start);
-						again(null);
+					}, function (err, times) {
+						next(null);
 					});
-
-				}, function (err, times) {
-					next(null);
-				});
+				}
 			}
 		], function () {
 			var t = new Table({
 				head: ['Method', 'avg time (ms)']
 			});
 
-			t.push(['Pure js', Math.round( nativeTime.reduce(function (a, b) {return a + b;}) / nativeTime.length * 100 ) / 100 ]);
-			t.push(['Group', Math.round( groupTime.reduce(function (a, b) {return a + b;}) / groupTime.length * 100 ) / 100 ]);
-			t.push(['Aggregation', Math.round( aggregationTime.reduce(function (a, b) {return a + b;}) / aggregationTime.length * 100) / 100]);
+			t.push(['Pure js', (arg.pure === false) ? 'No tested' : Math.round( nativeTime.reduce(function (a, b) {return a + b;}) / nativeTime.length * 100 ) / 100 ]);
+			t.push(['Group', (arg.group === false) ? 'No tested' : Math.round( groupTime.reduce(function (a, b) {return a + b;}) / groupTime.length * 100 ) / 100 ]);
+			t.push(['Aggregation', (arg.aggregate === false) ? 'No tested' : Math.round( aggregationTime.reduce(function (a, b) {return a + b;}) / aggregationTime.length * 100) / 100]);
 			console.log(t.toString());
 			process.exit(0);
 		});
@@ -196,8 +210,8 @@ function run () {
 		}
 
 		var collection = db.collection('tree');
-		console.log('Run %d times each method', nTimes);
-		runTest(db, collection);
+		console.log('Run %d times selected methods', nTimes);
+		runTest(arg, db, collection);
 	});
 }
 
@@ -209,12 +223,18 @@ Program
 Program
 	.command('run')
 		.callback(run)
-		.option('nTime', {
-			abbr: 'n',
-			full: 'n-times',
-			callback: function (n) {
-				nTimes = n;
-			}
+		.options({
+			'nTime': {
+				abbr: 'n',
+				full: 'n-times',
+				help: 'Run X times selected methods',
+				callback: function (n) {
+					nTimes = n;
+				}
+			},
+			'no-pure': { flag: true, help: 'Dont\'t test with pure js method' },
+			'no-group': { flag: true, help: 'Dont\'t test with Group() method' },
+			'no-aggregate': { flag: true, help: 'Dont\'t test with Aggregate method' }
 		})
 		.help('Run benchmark test');
 
