@@ -1,17 +1,18 @@
-Introduis dans la version 2.1 de mongodb, l' Aggregation Framework est une excellente alternative pour des operations que l'on pouvais faire avec map-reduce.
-Plus simple que map-reduce, l'aggregation permet d'aggreger (serieux ?) des donnée pour un resortir des totaux, moyennes, min/max, etc...
-Parfait pour des statistiques donc.
+# L'aggregation de données avec MongoDb
 
-Dans cet article je vais utiliser des donnée provenant du site d'open-data de Paris (http://opendata.paris.fr/ Merci Paris) .
+Introduis dans la version 2.1 de mongodb, le [framework d'aggregation](http://docs.mongodb.org/manual/core/aggregation/) est une excellente alternative pour les operations que l'on pouvais faire avec map-reduce.
+Plus simple que map-reduce, l'aggregation permet d'aggreger (serieux ?) des données pour un resortir des totaux, moyennes, min/max, etc...
+Parfait pour des statistiques.
+
+Dans cet article je vais utiliser des donnée provenant du site d'[open-data](http://opendata.paris.fr/) de Paris.
 J'ai choisi la liste des "Arbres d'alignement" (https://www.google.com/fusiontables/exporttable?query=select%20*%20from%201YRLTX-GshQ7F9OJyt63KRkDsubPDO7YUoWYOOJo). Je pas vraiment d'idée sur ce que c'est, mais il y a 237 168 lignes, c'est deja pas mal.
 
+## Combien il y a t'il d'arbres de chaque espece ?
 
-== Combien il y a t'il d'arbres de chaque espece ?
+Nous souhaitons grouper les espèces d'arbres et connaitre leur nombres.
+Essayons en benchmarker 3 differentes techniques, js pure, [Group()](http://docs.mongodb.org/manual/reference/command/group/) et [Aggregate](http://docs.mongodb.org/manual/reference/command/aggregate/#dbcmd.aggregate)
 
-Nous souhaitons grouper les espece d'arbres et connaitre leur noumbres.
-Essayons en benchmarker 3 differentes techniques.
-
-=== Js Pure
+### Js Pure
 
 ```
 Mongo.connect("mongodb://localhost:27017/aggregation_test?w=1", function(err, db) {
@@ -32,12 +33,13 @@ Mongo.connect("mongodb://localhost:27017/aggregation_test?w=1", function(err, db
 });
 ```
 
-environ XXXms
-Ce resultat vas nous servir de temps de reference.
+Environ 600ms
+Ce resultat va nous servir de temps de reference.
 
-=== Group
+### Group
 
-La methode *officiel* pour remplacer le GROUP BY d'sql est db.collection.group (http://docs.mongodb.org/manual/reference/method/db.collection.group/)
+La methode *officiel* pour remplacer le GROUP BY d'sql est ``db.collection.group``.
+http://docs.mongodb.org/manual/reference/method/db.collection.group/
 
 ```
 Mongo.connect("mongodb://localhost:27017/aggregation_test?w=1", function(err, db) {
@@ -56,9 +58,9 @@ Mongo.connect("mongodb://localhost:27017/aggregation_test?w=1", function(err, db
     });
 });
 ```
-Environ XXXms
+Environ 3.5s (secondes !)
 
-=== Framwork Aggreagate
+### Framwork Aggreagate
 
 Enfin nous testons avec le fameux framework d'aggregation
 
@@ -85,17 +87,18 @@ Mongo.connect("mongodb://localhost:27017/aggregation_test?w=1", function(err, db
 });
 ```
 
-Environ XXXms
+Environ 350ms.
 
-=== Tester chez vous
+### Tester chez vous
 
-Vous pouvez tester chez vous en executant ces script
-``npm install`` ``node tree_group_all.js setup`` puis ``node tree_group_all.js run -n 5``
+Vous pouvez tester chez vous en clonant le depot
+``git clone https://github.com/PierrickP/mongodb_group_test``
+Puis ``npm install``, ``node tree_group_all.js setup``, ``node tree_group_all.js run -n 5``
 
-== Conclusion
+## Conclusion
 
-On remarque tout de suite que le Group() est quasiment 10x plus lent qu'avec l'aggregation.
+On remarque tout de suite que le Group() est 10x plus lent qu'avec l'aggregation.
 Cela s'explique par le fait que Group est une extension de Map-Reduce et que Map-reduce gerer les données totalement differament du framework d'aggregation
 (http://stackoverflow.com/questions/12337319/mongodb-aggregation-comparison-group-group-and-mapreduce)
 
-On peux conclure que pour des groups relativement simple il est preferable d'utiliser le framework d'aggregation.
+On peux conclure que pour des opperations de groupage ou faire des sommes/moyennes/etc relativement simple il est preferable d'utiliser le framework d'aggregation.
