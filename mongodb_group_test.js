@@ -51,41 +51,6 @@ function setupMongoDB () {
 	});
 }
 
-function setupMongoDB_fast () {
-	var start = Date.now();
-	Mongo.connect("mongodb://"+mongoDb_url+":"+mongoDb_port+"/"+mongoDb_base+"?w=1", function(err, db) {
-		db.dropDatabase(function(err, result){
-			var collection = new Mongo.Collection(db, 'tree');
-			var rd = readline.createInterface({
-				input: fs.createReadStream('./OK Arbres d\'alignement - Données géographiques.csv', 'ascii'),
-				output: process.stdout,
-				terminal: false
-			});
-
-			rd.on('line', function (line) {
-				if (line !== "") {
-					var tree = line.split(',');
-					collection.insert({
-						genre: tree[1],
-						hauteur: tree[5],
-						Lib_Type_E: tree[6],
-						Lib_Etat_C: tree[7]
-					}, function(err) {
-						cb(err);
-					});
-				}
-			});
-
-			rd.on('close', function () {
-				console.log('Finish in %d ms', Date.now() - start);
-				db.close();
-				process.exit(0);
-			});
-
-		});
-	});
-}
-
 function run (arg) {
 
 	function runTest (arg, db, collection) {
