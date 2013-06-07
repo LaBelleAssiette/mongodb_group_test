@@ -98,7 +98,7 @@ Environ 350ms.
 Vous pouvez tester chez vous en clonant le dépôt
 
 ```
-git clone https://github.com/PierrickP/mongodb_group_test
+git clone https://github.com/LaBelleAssiette/mongodb_group_test
 cd mongodb_group_test
 npm install
 node tree_group_all.js setup
